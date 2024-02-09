@@ -1,0 +1,7 @@
+name: PopupPDFFlow
+description: "Flow to generate a PDF from a Matplotlib plot and display it in a popup window"
+pdf_viewer_path: "/usr/bin/evince"  # Path to the PDF viewer, change according to the OS and viewer
+
+input_interface:
+  - "png_file_path"
+

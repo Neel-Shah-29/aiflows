@@ -1,0 +1,80 @@
+name: "MatplotlibVisualizationCircularFlow"
+description: "A circular flow for continuously creating and displaying plots based on user input."
+
+# Configuration for the circular flow
+config:
+  max_rounds: 10  # Limit the number of iterations for demonstration purposes
+  early_exit_key: "user_exit"  # A flag in the flow state that indicates if the user wants to exit the flow
+
+# Subflows configuration
+subflows_config:
+  human_input_flow:
+    _target_: HumanStandardInputFlow.instantiate_from_default_config
+    name: "CollectPlotDetails"
+    description: "Collects plot details from the user."
+  chat_flow:
+    _target_: ChatAtomicFlow.instantiate_from_default_config
+    name: "GeneratePlotScript"
+    description: "Generates a matplotlib plotting script based on user input."
+  interpreter_flow:
+    _target_: InterpreterAtomicFlow.instantiate_from_default_config
+    name: "ExecutePlotScript"
+    description: "Executes the matplotlib plotting script."
+  popup_pdf_flow:
+    _target_: PopupPdfFlow.instantiate_from_default_config
+    name: "DisplayPlot"
+    description: "Displays the generated plot in a popup window."
+
+# Define the topology for circular execution
+topology:
+  - goal: "Collect user input for plotting"
+    input_interface:
+      _target_: aiflows.interfaces.KeyInterface
+      keys_to_select: ["dataset_csv", "visualization_instructions"]
+    flow: human_input_flow
+    output_interface:
+      _target_: aiflows.interfaces.KeyInterface
+      keys_to_rename:
+        human_input: "plot_details"
+      keys_to_select: ["plot_details"]
+    reset: false
+
+  - goal: "Generate plotting script from user input"
+    input_interface:
+      _target_: aiflows.interfaces.KeyInterface
+      keys_to_rename:
+        plot_details: "chat_input"
+      keys_to_select: ["chat_input"]
+    flow: chat_flow
+    output_interface:
+      _target_: aiflows.interfaces.KeyInterface
+      keys_to_rename:
+        chat_output: "plot_script"
+      keys_to_select: ["plot_script"]
+    reset: false
+
+  - goal: "Execute the plotting script to generate plot"
+    input_interface:
+      _target_: aiflows.interfaces.KeyInterface
+      keys_to_rename:
+        plot_script: "code_to_execute"
+      keys_to_select: ["code_to_execute"]
+    flow: interpreter_flow
+    output_interface:
+      _target_: aiflows.interfaces.KeyInterface
+      keys_to_rename:
+        execution_result: "plot_file_path"
+      keys_to_select: ["plot_file_path"]
+    reset: false
+
+  - goal: "Display the generated plot"
+    input_interface:
+      _target_: aiflows.interfaces.KeyInterface
+      keys_to_rename:
+        plot_file_path: "png_file_path"
+      keys_to_select: ["png_file_path"]
+    flow: popup_pdf_flow
+    output_interface:
+      _target_: aiflows.interfaces.NoOpInterface
+    reset: true  # Reset after displaying to allow new user input in the next round
+
